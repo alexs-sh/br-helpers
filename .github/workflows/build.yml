@@ -16,7 +16,7 @@ jobs:
           components: rustfmt, rust-src
 
       - name: Install packages
-        run: apt update -y && apt install -y gcc curl bzip2 lcov libssl-dev pkg-config
+        run: sudo apt update -y && sudo apt install -y gcc curl bzip2 lcov libssl-dev pkg-config
 
       - name: Build
         run: cargo build --release
