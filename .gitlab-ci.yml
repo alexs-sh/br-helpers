@@ -1,0 +1,38 @@
+stages:
+  - build
+  - analyze
+
+.base:
+  image: debian:11
+  before_script:
+    - export PATH="/root/.cargo/bin:${PATH}"
+    - apt update -y && apt install -y gcc curl bzip2 lcov libssl-dev pkg-config
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_SHA}
+    expire_in: 1 days
+  tags:
+    - docker
+
+x86_64-debian:11:
+  extends: .base
+  stage: build
+  script:
+    - cargo build --release
+    - cargo test
+  artifacts:
+    paths:
+    - target/release/brdiff
+  tags:
+    - docker
+
+clippy:
+  extends: .base
+  stage: analyze
+  needs: []
+  script:
+    - cargo clippy
+  tags:
+    - docker
+
+
