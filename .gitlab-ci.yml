@@ -19,7 +19,7 @@ x86_64-debian:11:
   stage: build
   script:
     - cargo build --release
-    - cargo test
+    - cargo test --release
   artifacts:
     paths:
     - target/release/brdiff
