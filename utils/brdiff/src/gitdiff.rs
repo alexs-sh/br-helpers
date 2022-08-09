@@ -1,119 +1,177 @@
 use crate::pkgdiff::{self, PkgDiff, PkgDiffs};
 use git2::*;
-use log::{debug, warn};
+use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
 use std::path::Path;
-use uuid::Uuid;
 
-fn create_repo(workdir: &str, uri: &str, key: Option<String>) -> Result<Repository, Error> {
-    let id = Uuid::new_v4();
-    let dst = format!("{}/{}", workdir, id);
-    debug!("cloning {} to {}", uri, dst);
+fn get_repo_name(uri: &str) -> Option<&str> {
+    let parts = uri.split('/');
+    let len = uri.len();
+    let git = len > 4 && &uri[len - 4..len] == ".git";
 
-    let mut callbacks = RemoteCallbacks::new();
-
-    let mut builder = git2::build::RepoBuilder::new();
-    let mut options = git2::FetchOptions::new();
-
-    if key.is_some() {
-        callbacks.credentials(|_url, username_from_url, _allowed_types| {
-            Cred::ssh_key(
-                username_from_url.unwrap(),
-                None,
-                std::path::Path::new(key.as_ref().unwrap_or(&"~/.ssh/id_rsa".to_string())),
-                None,
-            )
-        });
-    }
-
-    options.remote_callbacks(callbacks);
-    builder.fetch_options(options);
-    builder.clone(uri, Path::new(&dst)).map_err(|err| {
-        warn!("clone error:{}", err);
-        Error::new(ErrorKind::Other, "repo clone error")
-    })?;
-
-    let repo =
-        Repository::open(dst).map_err(|_| Error::new(ErrorKind::Other, "repo open error"))?;
-
-    Ok(repo)
-}
-
-fn search_commit<'a>(repo: &'a Repository, commit: &str) -> Result<Commit<'a>, Error> {
-    debug!("searching commit {} ", commit);
-    let oid = Oid::from_str(commit).map_err(|_| Error::new(ErrorKind::Other, "oid error"))?;
-
-    let commit = repo
-        .find_commit(oid)
-        .map_err(|_| Error::new(ErrorKind::Other, "commit error"))?;
-    Ok(commit)
-}
-
-fn sort_commit<'a>(c1: Commit<'a>, c2: Commit<'a>) -> (Commit<'a>, Commit<'a>) {
-    let c1_time = c1.time().seconds() - (c1.time().offset_minutes() as i64) * 60;
-    let c2_time = c2.time().seconds() - (c2.time().offset_minutes() as i64) * 60;
-    if c1_time <= c2_time {
-        (c1, c2)
+    if git && parts.clone().count() > 1 {
+        parts.last().map(|s| {
+            let len = s.len();
+            &s[..len - 4]
+        })
     } else {
-        (c2, c1)
+        None
     }
 }
 
-fn walk(
-    repo: &Repository,
-    commit1: &str,
-    commit2: &str,
-    short: bool,
-) -> Result<Vec<String>, Error> {
-    debug!("walking at {:?}", repo.workdir());
-
-    let mut result = Vec::new();
-    let c1 = search_commit(repo, commit1)?;
-    let c2 = search_commit(repo, commit2)?;
-    let (c1, c2) = sort_commit(c1, c2);
-
-    let mut walk = repo.revwalk().unwrap();
-    walk.push_range(&format!("{}..{}", c1.id(), c2.id()))
-        .unwrap();
-
-    if short {
-        walk.simplify_first_parent().unwrap();
-    }
-
-    for commit in walk {
-        let id = commit.unwrap();
-        let info = repo.find_commit(id).unwrap();
-        result.push(info.summary().unwrap_or("(NO SUMMARY)").to_owned());
-    }
-    Ok(result)
+struct RepoHistory<'a> {
+    repo: &'a Repository,
 }
 
-pub fn history(
-    workdir: &str,
-    uri: &str,
-    commit1: &str,
-    commit2: &str,
-    short: bool,
-    key: Option<String>,
-) -> Result<Vec<String>, Error> {
-    let repo = create_repo(workdir, uri, key)?;
-    walk(&repo, commit1, commit2, short)
+impl<'a> RepoHistory<'a> {
+    pub fn history(&self, commit1: &str, commit2: &str, short: bool) -> Result<Vec<String>, Error> {
+        let mut result = Vec::new();
+        let c1 = self.search_commit(commit1)?;
+        let c2 = self.search_commit(commit2)?;
+        let (c1, c2) = RepoHistory::sort_commit(c1, c2);
+
+        let mut walk = self.repo.revwalk().unwrap();
+        walk.push_range(&format!("{}..{}", c1.id(), c2.id()))
+            .unwrap();
+
+        if short {
+            walk.simplify_first_parent().unwrap();
+        }
+
+        for commit in walk {
+            let id = commit.unwrap();
+            let info = self.repo.find_commit(id).unwrap();
+            result.push(info.summary().unwrap_or("(NO SUMMARY)").to_owned());
+        }
+        Ok(result)
+    }
+
+    pub fn search_commit(&self, commit: &str) -> Result<Commit<'a>, Error> {
+        let oid = Oid::from_str(commit).map_err(|_| {
+            error!("failed to make OID from {}", commit);
+            Error::new(ErrorKind::Other, "oid error")
+        })?;
+        let commit = self.repo.find_commit(oid).map_err(|_| {
+            error!("failed to find commit {}", oid);
+            Error::new(ErrorKind::Other, "commit error")
+        })?;
+        Ok(commit)
+    }
+
+    fn sort_commit<'b>(c1: Commit<'b>, c2: Commit<'b>) -> (Commit<'b>, Commit<'b>) {
+        let c1_time = c1.time().seconds() - (c1.time().offset_minutes() as i64) * 60;
+        let c2_time = c2.time().seconds() - (c2.time().offset_minutes() as i64) * 60;
+        if c1_time <= c2_time {
+            (c1, c2)
+        } else {
+            (c2, c1)
+        }
+    }
 }
 
-pub fn print_diffs(workdir: &str, diffs: &PkgDiffs, short: bool, key: Option<String>) {
+#[derive(Clone)]
+pub struct HistoryBuilderOptions {
+    pub workdir: String,
+    pub key: Option<String>,
+    pub clean_workdir: bool,
+    pub short_history: bool,
+}
+
+impl HistoryBuilderOptions {
+    pub fn new(workdir: &str) -> HistoryBuilderOptions {
+        HistoryBuilderOptions {
+            workdir: workdir.to_owned(),
+            key: None,
+            clean_workdir: false,
+            short_history: true,
+        }
+    }
+}
+
+pub struct RepoHistoryBuilder {
+    options: HistoryBuilderOptions,
+}
+
+impl RepoHistoryBuilder {
+    pub fn new(options: &HistoryBuilderOptions) -> RepoHistoryBuilder {
+        RepoHistoryBuilder {
+            options: options.clone(),
+        }
+    }
+
+    pub fn init(&self) -> Result<(), Error> {
+        let path = &self.options.workdir;
+        if self.options.clean_workdir {
+            debug!("removing directory: {}", path);
+            std::fs::remove_dir_all(path)?;
+        }
+        if std::fs::read_dir(path).is_err() {
+            debug!("creating directory: {}", path);
+            std::fs::create_dir_all(path)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn history(&self, uri: &str, commit1: &str, commit2: &str) -> Result<Vec<String>, Error> {
+        let repo = self.init_repo(uri)?;
+        RepoHistory { repo: &repo }.history(commit1, commit2, self.options.short_history)
+    }
+
+    fn init_repo(&self, uri: &str) -> Result<Repository, Error> {
+        let repo = get_repo_name(uri)
+            .ok_or_else(|| Error::new(ErrorKind::Other, "can't find repo name"))?;
+        let path = format!("{}/{}", self.options.workdir, repo);
+        self.clone_repo(uri, &path)?;
+        info!("opening repo {}", path);
+        let repo =
+            Repository::open(path).map_err(|_| Error::new(ErrorKind::Other, "repo open error"))?;
+
+        Ok(repo)
+    }
+
+    fn clone_repo(&self, uri: &str, path: &str) -> Result<(), Error> {
+        if std::fs::read_dir(path).is_err() {
+            info!("cloning {} into {}", uri, path);
+            let mut callbacks = RemoteCallbacks::new();
+            let mut builder = git2::build::RepoBuilder::new();
+            let mut options = git2::FetchOptions::new();
+
+            if let Some(key) = &self.options.key {
+                callbacks.credentials(|_url, username_from_url, _allowed_types| {
+                    Cred::ssh_key(
+                        username_from_url.unwrap(),
+                        None,
+                        std::path::Path::new(key),
+                        None,
+                    )
+                });
+            }
+            options.remote_callbacks(callbacks);
+            builder.fetch_options(options);
+            builder.clone(uri, Path::new(&path)).map_err(|err| {
+                warn!("clone error:{}", err);
+                Error::new(ErrorKind::Other, "repo clone error")
+            })?;
+            Ok(())
+        } else {
+            info!("skip cloning.{} already exists", path);
+            Ok(())
+        }
+    }
+}
+
+pub fn print_diffs(diffs: &PkgDiffs, options: &HistoryBuilderOptions) {
     let mut commits = HashMap::new();
+
+    let repo = RepoHistoryBuilder::new(options);
+    repo.init().unwrap();
+
     for c in diffs.values() {
         if let PkgDiff::Changed { first, second } = c {
             if let Some(uri) = second.get_git_source() {
-                match history(
-                    workdir,
-                    &uri,
-                    &first.version,
-                    &second.version,
-                    short,
-                    key.clone(),
-                ) {
+                match repo.history(&uri, &first.version, &second.version) {
                     Ok(info) => {
                         debug!("add {} commits to {}", info.len(), second.name);
                         commits.insert(second.name.clone(), info);
@@ -133,5 +191,24 @@ pub fn print_diffs(workdir: &str, diffs: &PkgDiffs, short: bool, key: Option<Str
                 println!("        - {}", c);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_repo_name() {
+        assert_eq!(
+            get_repo_name("git@github.com:rust-lang/rust.git"),
+            Some("rust")
+        );
+        assert_eq!(get_repo_name("git@github.com:ghc/ghc.git"), Some("ghc"));
+        assert_eq!(
+            get_repo_name("https://github.com/torvalds/linux.git"),
+            Some("linux")
+        );
+        assert_eq!(get_repo_name("https://github.com/torvalds/linux.gi"), None);
+        assert_eq!(get_repo_name("https:|linux.git"), None);
     }
 }

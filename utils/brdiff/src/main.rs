@@ -42,13 +42,30 @@ struct Options {
     #[structopt(
         short = "w",
         long = "workdir",
-        default_value = "/tmp",
+        default_value = "/tmp/brdiff",
         about = "working directory"
     )]
     workdir: String,
 
     #[structopt(short = "k", long = "key", about = "SSH key")]
     key: Option<String>,
+
+    #[structopt(
+        short = "c",
+        long = "clean",
+        parse(try_from_str),
+        default_value = "false",
+        about = "clean working directory before run"
+    )]
+    clean: bool,
+
+    #[structopt(
+        long = "short-history",
+        parse(try_from_str),
+        default_value = "true",
+        about = "short git history"
+    )]
+    short_history: bool,
 }
 
 fn get_info(path: &str) -> Result<PkgInfos, Error> {
@@ -63,8 +80,13 @@ fn run(opts: Options) -> Result<(), Error> {
     let diffs = pkgdiff::build(&first, &second);
     debug!("{} diffs", diffs.len());
     if opts.mode == "medium" {
+        unimplemented!()
     } else if opts.mode == "full" {
-        gitdiff::print_diffs(&opts.workdir, &diffs, true, opts.key);
+        let mut diffopts = gitdiff::HistoryBuilderOptions::new(&opts.workdir);
+        diffopts.key = opts.key;
+        diffopts.clean_workdir = opts.clean;
+        diffopts.short_history = opts.short_history;
+        gitdiff::print_diffs(&diffs, &diffopts);
     } else {
         pkgdiff::print_diffs(&diffs);
     }
@@ -73,6 +95,7 @@ fn run(opts: Options) -> Result<(), Error> {
 
 fn main() {
     env_logger::init();
+
     let opts = Options::from_args();
     match run(opts) {
         Ok(_) => {
