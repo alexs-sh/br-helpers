@@ -101,11 +101,15 @@ impl RepoHistoryBuilder {
 
     pub fn init(&self) -> Result<(), Error> {
         let path = &self.options.workdir;
-        if self.options.clean_workdir {
+        let exists = std::fs::read_dir(path).is_ok();
+
+        if self.options.clean_workdir && !exists {
             debug!("removing directory: {}", path);
             std::fs::remove_dir_all(path)?;
         }
-        if std::fs::read_dir(path).is_err() {
+
+        let exists = std::fs::read_dir(path).is_ok();
+        if !exists {
             debug!("creating directory: {}", path);
             std::fs::create_dir_all(path)
         } else {
