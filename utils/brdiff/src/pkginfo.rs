@@ -44,7 +44,6 @@ impl FromStr for PkgSource {
 }
 
 #[cfg(test)]
-
 mod test {
     use super::*;
     #[test]

@@ -77,19 +77,18 @@ fn get_info(path: &str) -> Result<PkgInfos, Error> {
 fn run(opts: Options) -> Result<(), Error> {
     let first = get_info(&opts.first_file)?;
     let second = get_info(&opts.second_file)?;
-    let diffs = pkgdiff::build(&first, &second);
-    debug!("{} diffs", diffs.len());
+    let mut diffs = pkgdiff::build(&first, &second);
     if opts.mode == "medium" {
         unimplemented!()
     } else if opts.mode == "full" {
+        debug!("try to build full history for {} package(s)", diffs.len());
         let mut diffopts = gitdiff::HistoryBuilderOptions::new(&opts.workdir);
         diffopts.key = opts.key;
         diffopts.clean_workdir = opts.clean;
         diffopts.short_history = opts.short_history;
-        gitdiff::print_diffs(&diffs, &diffopts);
-    } else {
-        pkgdiff::print_diffs(&diffs);
-    }
+        gitdiff::append_history(&mut diffs, &diffopts);
+    };
+    pkgdiff::print_diffs(&diffs);
     Ok(())
 }
 

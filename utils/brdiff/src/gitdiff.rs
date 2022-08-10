@@ -1,7 +1,6 @@
-use crate::pkgdiff::{self, PkgDiff, PkgDiffs};
+use crate::pkgdiff::{PkgDiff, PkgDiffs, PkgHistory, PkgHistoryRecord};
 use git2::*;
 use log::{debug, error, info, warn};
-use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
 use std::path::Path;
 
@@ -162,33 +161,30 @@ impl RepoHistoryBuilder {
     }
 }
 
-pub fn print_diffs(diffs: &PkgDiffs, options: &HistoryBuilderOptions) {
-    let mut commits = HashMap::new();
-
+pub fn append_history(diffs: &mut PkgDiffs, options: &HistoryBuilderOptions) {
     let repo = RepoHistoryBuilder::new(options);
     repo.init().unwrap();
 
-    for c in diffs.values() {
-        if let PkgDiff::Changed { first, second } = c {
+    for (_, c) in diffs.iter_mut() {
+        if let PkgDiff::Changed {
+            first,
+            second,
+            history,
+        } = c
+        {
             if let Some(uri) = second.get_git_source() {
                 match repo.history(&uri, &first.version, &second.version) {
                     Ok(info) => {
                         debug!("add {} commits to {}", info.len(), second.name);
-                        commits.insert(second.name.clone(), info);
+                        let history = history.get_or_insert(PkgHistory::new());
+                        info.iter().for_each(|r| {
+                            history.push(PkgHistoryRecord { summary: r.clone() });
+                        });
                     }
                     Err(err) => {
                         warn!("{}", err)
                     }
                 }
-            }
-        }
-    }
-
-    for d in diffs.values() {
-        pkgdiff::print_diff(d);
-        if let Some(commits) = commits.get(d.name()) {
-            for c in commits {
-                println!("        - {}", c);
             }
         }
     }

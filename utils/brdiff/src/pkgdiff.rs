@@ -1,10 +1,24 @@
 use crate::pkginfo::{PkgInfo, PkgInfos};
 use std::collections::HashMap;
+use std::fmt::Display;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PkgHistoryRecord {
+    pub summary: String,
+}
 
 pub enum PkgDiff {
-    Added { package: PkgInfo },
-    Changed { first: PkgInfo, second: PkgInfo },
-    Removed { package: PkgInfo },
+    Added {
+        package: PkgInfo,
+    },
+    Changed {
+        first: PkgInfo,
+        second: PkgInfo,
+        history: Option<PkgHistory>,
+    },
+    Removed {
+        package: PkgInfo,
+    },
 }
 
 impl PkgDiff {
@@ -18,6 +32,7 @@ impl PkgDiff {
 }
 
 pub type PkgDiffs = HashMap<String, PkgDiff>;
+pub type PkgHistory = Vec<PkgHistoryRecord>;
 
 pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
     let mut result = PkgDiffs::new();
@@ -31,6 +46,7 @@ pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
                     PkgDiff::Changed {
                         first: package.clone(),
                         second: info.clone(),
+                        history: None,
                     },
                 );
             }
@@ -59,33 +75,54 @@ pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
     result
 }
 
-pub fn print_diff(diff: &PkgDiff) {
-    match diff {
-        PkgDiff::Added { package } => {
-            println!("[+] {} [added]", package.name);
-            println!("      version: {}", package.version);
-        }
-        PkgDiff::Removed { package } => {
-            println!("[-] {} [removed]", package.name);
-        }
-        PkgDiff::Changed { first, second } => {
-            println!("[*] {} [modified]", first.name);
-            if first.version != second.version {
-                println!("      version: {} -> {}", first.version, second.version);
-            }
-            if first.sources != second.sources {
-                println!("      sources: changed");
-            }
-            //for s in &first.sources {
-            //    println!("    - sources A: {:?}",s);
-            //}
-            //for s in &second.sources {
-            //    println!("    - sources B: {:?}",s);
-            //}}
-        }
+pub fn print_diffs(diffs: &PkgDiffs) {
+    diffs.iter().for_each(|(_, diff)| println!("{}", diff));
+}
+
+impl Display for PkgHistoryRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "       - {}", self.summary)
     }
 }
 
-pub fn print_diffs(diffs: &PkgDiffs) {
-    diffs.iter().for_each(|(_, diff)| print_diff(diff));
+impl Display for PkgDiff {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PkgDiff::Added { package } => {
+                writeln!(f, "[+] {} [added]", package.name)?;
+                writeln!(f, "      version: {}", package.version)?;
+            }
+            PkgDiff::Removed { package } => {
+                writeln!(f, "[-] {} [removed]", package.name)?;
+            }
+            PkgDiff::Changed {
+                first,
+                second,
+                history,
+            } => {
+                writeln!(f, "[*] {} [modified]", first.name)?;
+                if first.version != second.version {
+                    writeln!(f, "      version: {} -> {}", first.version, second.version)?;
+                }
+                if first.sources != second.sources {
+                    writeln!(f, "      sources: changed")?;
+                }
+
+                // show history if it presented
+                if let Some(hist) = history.as_ref() {
+                    hist.iter().for_each(|rec| {
+                        let _ = rec.fmt(f);
+                    });
+                };
+
+                //for s in &first.sources {
+                //    println!("    - sources A: {:?}",s);
+                //}
+                //for s in &second.sources {
+                //    println!("    - sources B: {:?}",s);
+                //}}
+            }
+        };
+        Ok(())
+    }
 }
