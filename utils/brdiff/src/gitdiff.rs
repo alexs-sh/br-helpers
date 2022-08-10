@@ -47,15 +47,17 @@ impl<'a> RepoHistory<'a> {
     }
 
     pub fn search_commit(&self, commit: &str) -> Result<Commit<'a>, Error> {
-        let oid = Oid::from_str(commit).map_err(|_| {
-            error!("failed to make OID from {}", commit);
-            Error::new(ErrorKind::Other, "oid error")
-        })?;
-        let commit = self.repo.find_commit(oid).map_err(|_| {
-            error!("failed to find commit {}", oid);
+        info!("searching commit:{}", commit);
+
+        let parsed = self.repo.revparse_single(commit).map_err(|_| {
+            error!("failed to find commit: {}", commit);
             Error::new(ErrorKind::Other, "commit error")
         })?;
-        Ok(commit)
+
+        parsed.into_commit().map_err(|_| {
+            error!("not a commit: {}", commit);
+            Error::new(ErrorKind::Other, "commit error")
+        })
     }
 
     fn sort_commit<'b>(c1: Commit<'b>, c2: Commit<'b>) -> (Commit<'b>, Commit<'b>) {
