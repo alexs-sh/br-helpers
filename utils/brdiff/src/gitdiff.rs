@@ -25,14 +25,37 @@ struct RepoHistory<'a> {
 
 impl<'a> RepoHistory<'a> {
     pub fn history(&self, commit1: &str, commit2: &str, short: bool) -> Result<Vec<String>, Error> {
+        let result = self.history_short(commit1, commit2, short)?;
+        if !result.is_empty() {
+            Ok(result)
+        } else {
+            self.history_short(commit2, commit1, short)
+        }
+    }
+
+    pub fn search_oid(&self, commit: &str) -> Result<Oid, Error> {
+        info!("searching object:{}", commit);
+
+        let parsed = self.repo.revparse_single(commit).map_err(|_| {
+            error!("failed to find object: {}", commit);
+            Error::new(ErrorKind::Other, "failed to find object")
+        })?;
+
+        Ok(parsed.id())
+    }
+
+    fn history_short(
+        &self,
+        commit1: &str,
+        commit2: &str,
+        short: bool,
+    ) -> Result<Vec<String>, Error> {
         let mut result = Vec::new();
-        let c1 = self.search_commit(commit1)?;
-        let c2 = self.search_commit(commit2)?;
-        let (c1, c2) = RepoHistory::sort_commit(c1, c2);
+        let c1 = self.search_oid(commit1)?;
+        let c2 = self.search_oid(commit2)?;
 
         let mut walk = self.repo.revwalk().unwrap();
-        walk.push_range(&format!("{}..{}", c1.id(), c2.id()))
-            .unwrap();
+        walk.push_range(&format!("{}..{}", c1, c2)).unwrap();
 
         if short {
             walk.simplify_first_parent().unwrap();
@@ -44,30 +67,6 @@ impl<'a> RepoHistory<'a> {
             result.push(info.summary().unwrap_or("(NO SUMMARY)").to_owned());
         }
         Ok(result)
-    }
-
-    pub fn search_commit(&self, commit: &str) -> Result<Commit<'a>, Error> {
-        info!("searching commit:{}", commit);
-
-        let parsed = self.repo.revparse_single(commit).map_err(|_| {
-            error!("failed to find commit: {}", commit);
-            Error::new(ErrorKind::Other, "commit error")
-        })?;
-
-        parsed.into_commit().map_err(|_| {
-            error!("not a commit: {}", commit);
-            Error::new(ErrorKind::Other, "commit error")
-        })
-    }
-
-    fn sort_commit<'b>(c1: Commit<'b>, c2: Commit<'b>) -> (Commit<'b>, Commit<'b>) {
-        let c1_time = c1.time().seconds() - (c1.time().offset_minutes() as i64) * 60;
-        let c2_time = c2.time().seconds() - (c2.time().offset_minutes() as i64) * 60;
-        if c1_time <= c2_time {
-            (c1, c2)
-        } else {
-            (c2, c1)
-        }
     }
 }
 
