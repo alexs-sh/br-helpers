@@ -2,23 +2,23 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum PkgSource {
+pub enum PackageSource {
     Git(String),
     Https(String),
     Other(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PkgInfo {
+pub struct Package {
     pub name: String,
     pub version: String,
-    pub sources: PkgSources,
+    pub sources: PackageSources,
 }
 
-impl PkgInfo {
+impl Package {
     pub fn get_git_source(&self) -> Option<String> {
         for s in &self.sources {
-            if let PkgSource::Git(uri) = s {
+            if let PackageSource::Git(uri) = s {
                 return Some(uri.to_owned());
             }
         }
@@ -26,18 +26,18 @@ impl PkgInfo {
     }
 }
 
-pub type PkgInfos = HashMap<String, PkgInfo>;
-pub type PkgSources = Vec<PkgSource>;
+pub type Packages = HashMap<String, Package>;
+pub type PackageSources = Vec<PackageSource>;
 
-impl FromStr for PkgSource {
+impl FromStr for PackageSource {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let prefixes = ["git+", "https+", "other"];
         let mode = prefixes.iter().find(|&x| s.contains(x));
         let output = match mode {
-            Some(&"https+") => PkgSource::Https(s[6..].to_owned()),
-            Some(&"git+") => PkgSource::Git(s[4..].to_owned()),
-            _ => PkgSource::Other(s.to_owned()),
+            Some(&"https+") => PackageSource::Https(s[6..].to_owned()),
+            Some(&"git+") => PackageSource::Git(s[4..].to_owned()),
+            _ => PackageSource::Other(s.to_owned()),
         };
         Ok(output)
     }
@@ -48,9 +48,9 @@ mod test {
     use super::*;
     #[test]
     fn from_str_https() {
-        match PkgSource::from_str("https+https://snapshot.debian.org/archive/debian/20201008T205817Z/pool/main/f/fakeroot").unwrap()
+        match PackageSource::from_str("https+https://snapshot.debian.org/archive/debian/20201008T205817Z/pool/main/f/fakeroot").unwrap()
         {
-            PkgSource::Https(src) => {
+            PackageSource::Https(src) => {
                 assert_eq!(src,"https://snapshot.debian.org/archive/debian/20201008T205817Z/pool/main/f/fakeroot")
             },
             _ => {unimplemented!()}
@@ -59,8 +59,8 @@ mod test {
 
     #[test]
     fn from_str_git() {
-        match PkgSource::from_str("git+git@github.com:rust-lang/rust.git").unwrap() {
-            PkgSource::Git(src) => {
+        match PackageSource::from_str("git+git@github.com:rust-lang/rust.git").unwrap() {
+            PackageSource::Git(src) => {
                 assert_eq!(src, "git@github.com:rust-lang/rust.git")
             }
             _ => {
@@ -71,8 +71,8 @@ mod test {
 
     #[test]
     fn from_str_other() {
-        match PkgSource::from_str("local+/tmp/build/custom/super-package").unwrap() {
-            PkgSource::Other(src) => {
+        match PackageSource::from_str("local+/tmp/build/custom/super-package").unwrap() {
+            PackageSource::Other(src) => {
                 assert_eq!(src, "local+/tmp/build/custom/super-package")
             }
             _ => {

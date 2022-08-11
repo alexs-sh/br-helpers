@@ -1,43 +1,42 @@
-use crate::pkginfo::{PkgInfo, PkgInfos};
+use crate::package::{Package, Packages};
 use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PkgHistoryRecord {
+pub struct PackageChange {
     pub summary: Option<String>,
     pub author: Option<String>,
     pub id: Option<String>,
 }
 
-pub enum PkgDiff {
+pub enum PackageDiff {
     Added {
-        package: PkgInfo,
+        package: Package,
     },
     Changed {
-        first: PkgInfo,
-        second: PkgInfo,
-        history: Option<PkgHistory>,
+        first: Package,
+        second: Package,
+        history: Option<Vec<PackageChange>>,
     },
     Removed {
-        package: PkgInfo,
+        package: Package,
     },
 }
 
-impl PkgDiff {
+impl PackageDiff {
     pub fn name(&self) -> &String {
         match self {
-            PkgDiff::Added { package } => &package.name,
-            PkgDiff::Changed { second, .. } => &second.name,
-            PkgDiff::Removed { package } => &package.name,
+            PackageDiff::Added { package } => &package.name,
+            PackageDiff::Changed { second, .. } => &second.name,
+            PackageDiff::Removed { package } => &package.name,
         }
     }
 }
 
-pub type PkgDiffs = HashMap<String, PkgDiff>;
-pub type PkgHistory = Vec<PkgHistoryRecord>;
+pub type PackagesDiff = HashMap<String, PackageDiff>;
 
-pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
-    let mut result = PkgDiffs::new();
+pub fn build(first: &Packages, second: &Packages) -> PackagesDiff {
+    let mut result = PackagesDiff::new();
 
     //changed + removed
     for (name, package) in first {
@@ -45,7 +44,7 @@ pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
             if package != info {
                 result.insert(
                     name.clone(),
-                    PkgDiff::Changed {
+                    PackageDiff::Changed {
                         first: package.clone(),
                         second: info.clone(),
                         history: None,
@@ -55,7 +54,7 @@ pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
         } else {
             result.insert(
                 name.clone(),
-                PkgDiff::Removed {
+                PackageDiff::Removed {
                     package: package.clone(),
                 },
             );
@@ -67,7 +66,7 @@ pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
         if !first.contains_key(name) {
             result.insert(
                 name.clone(),
-                PkgDiff::Added {
+                PackageDiff::Added {
                     package: package.clone(),
                 },
             );
@@ -77,11 +76,7 @@ pub fn build(first: &PkgInfos, second: &PkgInfos) -> PkgDiffs {
     result
 }
 
-pub fn print_diffs(diffs: &PkgDiffs) {
-    diffs.iter().for_each(|(_, diff)| println!("{}", diff));
-}
-
-impl Display for PkgHistoryRecord {
+impl Display for PackageChange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(val) = &self.summary {
             writeln!(f, "       - {}", val)?;
@@ -96,17 +91,17 @@ impl Display for PkgHistoryRecord {
     }
 }
 
-impl Display for PkgDiff {
+impl Display for PackageDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PkgDiff::Added { package } => {
+            PackageDiff::Added { package } => {
                 writeln!(f, "[+] {} [added]", package.name)?;
                 writeln!(f, "      version: {}", package.version)?;
             }
-            PkgDiff::Removed { package } => {
+            PackageDiff::Removed { package } => {
                 writeln!(f, "[-] {} [removed]", package.name)?;
             }
-            PkgDiff::Changed {
+            PackageDiff::Changed {
                 first,
                 second,
                 history,
@@ -125,13 +120,6 @@ impl Display for PkgDiff {
                         let _ = rec.fmt(f);
                     });
                 };
-
-                //for s in &first.sources {
-                //    println!("    - sources A: {:?}",s);
-                //}
-                //for s in &second.sources {
-                //    println!("    - sources B: {:?}",s);
-                //}}
             }
         };
         Ok(())

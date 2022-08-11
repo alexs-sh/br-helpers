@@ -1,12 +1,8 @@
-mod gitdiff;
-mod pkgdiff;
-mod pkginfo;
 mod show_info;
 
+use base::{diffs, githistory, gitworkspace, report};
 use log::{debug, error};
-use pkginfo::PkgInfos;
 use std::io::Error;
-use std::path::Path;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -68,27 +64,19 @@ struct Options {
     short_history: bool,
 }
 
-fn get_info(path: &str) -> Result<PkgInfos, Error> {
-    let infos = show_info::read(Path::new(&path))?;
-    debug!("read {} packages from {}", infos.len(), path);
-    Ok(infos)
-}
-
 fn run(opts: Options) -> Result<(), Error> {
-    let first = get_info(&opts.first_file)?;
-    let second = get_info(&opts.second_file)?;
-    let mut diffs = pkgdiff::build(&first, &second);
-    if opts.mode == "medium" {
-        unimplemented!()
-    } else if opts.mode == "full" {
+    let first = show_info::read(&opts.first_file)?;
+    let second = show_info::read(&opts.second_file)?;
+    let mut diffs = diffs::build(&first, &second);
+    if opts.mode == "full" {
         debug!("try to build full history for {} package(s)", diffs.len());
-        let mut diffopts = gitdiff::HistoryBuilderOptions::new(&opts.workdir);
-        diffopts.key = opts.key;
-        diffopts.clean_workdir = opts.clean;
-        diffopts.short_history = opts.short_history;
-        gitdiff::append_history(&mut diffs, &diffopts);
+        let mut wsopts = gitworkspace::Options::new(&opts.workdir);
+        wsopts.key = opts.key;
+        wsopts.clean_workspace = opts.clean;
+        wsopts.short_history = opts.short_history;
+        githistory::append(&mut diffs, &wsopts)?;
     };
-    pkgdiff::print_diffs(&diffs);
+    report::print_diffs(&diffs);
     Ok(())
 }
 

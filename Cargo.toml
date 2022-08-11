@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "utils/brdiff"
+    "utils/brdiff",
+    "base"
 ]
 
 
