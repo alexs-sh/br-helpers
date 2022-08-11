@@ -24,7 +24,7 @@ struct RepoHistory<'a> {
 }
 
 impl<'a> RepoHistory<'a> {
-    pub fn history(&self, commit1: &str, commit2: &str, short: bool) -> Result<Vec<String>, Error> {
+    pub fn history(&self, commit1: &str, commit2: &str, short: bool) -> Result<PkgHistory, Error> {
         let result = self.history_short(commit1, commit2, short)?;
         if !result.is_empty() {
             Ok(result)
@@ -34,7 +34,7 @@ impl<'a> RepoHistory<'a> {
     }
 
     pub fn search_oid(&self, commit: &str) -> Result<Oid, Error> {
-        info!("searching object:{}", commit);
+        debug!("searching object:{}", commit);
 
         let parsed = self.repo.revparse_single(commit).map_err(|_| {
             error!("failed to find object: {}", commit);
@@ -49,7 +49,7 @@ impl<'a> RepoHistory<'a> {
         commit1: &str,
         commit2: &str,
         short: bool,
-    ) -> Result<Vec<String>, Error> {
+    ) -> Result<PkgHistory, Error> {
         let mut result = Vec::new();
         let c1 = self.search_oid(commit1)?;
         let c2 = self.search_oid(commit2)?;
@@ -64,7 +64,12 @@ impl<'a> RepoHistory<'a> {
         for commit in walk {
             let id = commit.unwrap();
             let info = self.repo.find_commit(id).unwrap();
-            result.push(info.summary().unwrap_or("(NO SUMMARY)").to_owned());
+            let history = PkgHistoryRecord {
+                summary: info.summary().map(|s| s.to_owned()),
+                author: Some(info.author().to_string()),
+                id: Some(id.to_string()),
+            };
+            result.push(history);
         }
         Ok(result)
     }
@@ -118,7 +123,7 @@ impl RepoHistoryBuilder {
         }
     }
 
-    pub fn history(&self, uri: &str, commit1: &str, commit2: &str) -> Result<Vec<String>, Error> {
+    pub fn history(&self, uri: &str, commit1: &str, commit2: &str) -> Result<PkgHistory, Error> {
         let repo = self.init_repo(uri)?;
         RepoHistory { repo: &repo }.history(commit1, commit2, self.options.short_history)
     }
@@ -182,9 +187,7 @@ pub fn append_history(diffs: &mut PkgDiffs, options: &HistoryBuilderOptions) {
                     Ok(info) => {
                         debug!("add {} commits to {}", info.len(), second.name);
                         let history = history.get_or_insert(PkgHistory::new());
-                        info.iter().for_each(|r| {
-                            history.push(PkgHistoryRecord { summary: r.clone() });
-                        });
+                        info.iter().for_each(|r| history.push(r.clone()));
                     }
                     Err(err) => {
                         warn!("{}", err)

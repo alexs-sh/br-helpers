@@ -4,7 +4,9 @@ use std::fmt::Display;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PkgHistoryRecord {
-    pub summary: String,
+    pub summary: Option<String>,
+    pub author: Option<String>,
+    pub id: Option<String>,
 }
 
 pub enum PkgDiff {
@@ -81,7 +83,16 @@ pub fn print_diffs(diffs: &PkgDiffs) {
 
 impl Display for PkgHistoryRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "       - {}", self.summary)
+        if let Some(val) = &self.summary {
+            writeln!(f, "       - {}", val)?;
+        }
+        if let Some(val) = &self.id {
+            writeln!(f, "           - id: {}", val)?;
+        }
+        if let Some(val) = &self.author {
+            writeln!(f, "           - author: {}", val)?;
+        }
+        Ok(())
     }
 }
 
