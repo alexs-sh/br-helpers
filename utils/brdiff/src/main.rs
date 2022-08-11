@@ -31,7 +31,7 @@ struct Options {
         short = "m",
         long = "mode",
         default_value = "fast",
-        about = "diff mode [fast,medium,full]"
+        about = "diff mode [fast,full]"
     )]
     mode: String,
 
