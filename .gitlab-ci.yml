@@ -22,7 +22,8 @@ x86_64-debian:11:
     - cargo test --release
   artifacts:
     paths:
-    - target/release/brdiff
+    - target/release/show-info-diff
+    - target/release/mk-diff
   tags:
     - docker
 
