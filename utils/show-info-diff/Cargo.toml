@@ -1,5 +1,5 @@
 [package]
-name = "brdiff"
+name = "show-info-diff"
 version = "0.1.0"
 edition = "2021"
 
