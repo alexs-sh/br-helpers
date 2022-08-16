@@ -1,7 +1,6 @@
 [workspace]
 members = [
-    "utils/show-info-diff",
-    "utils/mk-diff",
+    "utils/brdiff",
     "base"
 ]
 

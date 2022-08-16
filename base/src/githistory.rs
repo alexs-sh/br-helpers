@@ -77,18 +77,21 @@ pub fn append(diffs: &mut PackagesDiff, options: &Options) -> Result<(), Error> 
             history,
         } = c
         {
-            if let Some(uri) = second.get_git_source() {
-                let repo = workspace.create_repo(&uri)?;
-                let commits = GitHistoryBuilder { repo: &repo }.history(
-                    &first.version,
-                    &second.version,
-                    options.short_history,
-                )?;
+            let got_versions = first.version.is_some() && second.version.is_some();
+            if got_versions {
+                if let Some(uri) = second.get_git_source() {
+                    let repo = workspace.create_repo(&uri)?;
+                    let commits = GitHistoryBuilder { repo: &repo }.history(
+                        first.version.as_ref().unwrap(),
+                        second.version.as_ref().unwrap(),
+                        options.short_history,
+                    )?;
 
-                debug!("add {} commits to {}", commits.len(), second.name);
+                    debug!("add {} commits to {}", commits.len(), second.name);
 
-                let history = history.get_or_insert(Vec::new());
-                commits.iter().for_each(|r| history.push(r.clone()));
+                    let history = history.get_or_insert(Vec::new());
+                    commits.iter().for_each(|r| history.push(r.clone()));
+                }
             }
         }
     }

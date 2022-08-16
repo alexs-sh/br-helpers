@@ -96,7 +96,9 @@ impl Display for PackageDiff {
         match self {
             PackageDiff::Added { package } => {
                 writeln!(f, "[+] {} [added]", package.name)?;
-                writeln!(f, "      version: {}", package.version)?;
+                if let Some(ver) = package.version.as_ref() {
+                    writeln!(f, "      version: {}", ver)?;
+                }
             }
             PackageDiff::Removed { package } => {
                 writeln!(f, "[-] {} [removed]", package.name)?;
@@ -107,13 +109,19 @@ impl Display for PackageDiff {
                 history,
             } => {
                 writeln!(f, "[*] {} [modified]", first.name)?;
-                if first.version != second.version {
-                    writeln!(f, "      version: {} -> {}", first.version, second.version)?;
+                let got_versions = first.version.is_some() && second.version.is_some();
+                if got_versions && first.version != second.version {
+                    writeln!(
+                        f,
+                        "      version: {} -> {}",
+                        first.version.as_ref().unwrap(),
+                        second.version.as_ref().unwrap()
+                    )?;
                 }
+
                 if first.sources != second.sources {
                     writeln!(f, "      sources: changed")?;
                 }
-
                 // show history if it presented
                 if let Some(hist) = history.as_ref() {
                     hist.iter().for_each(|rec| {

@@ -1,10 +1,10 @@
+use base::package::PackageReader;
 use base::package::{Package, PackageSource, PackageSources, Packages};
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::Error;
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -47,8 +47,9 @@ fn make_sources(downloads: &Vec<Downloads>) -> PackageSources {
 fn make_pkgino(input: &ShowInfoPackage) -> Option<Package> {
     validate_package(input).map(|pkg| Package {
         name: pkg.name.as_ref().unwrap().clone(),
-        version: pkg.version.as_ref().unwrap().clone(),
+        version: pkg.version.clone(),
         sources: make_sources(input.downloads.as_ref().unwrap()),
+        location: None,
     })
 }
 
@@ -61,13 +62,28 @@ fn convert(input: &ShowInfoPackages) -> Packages {
     output
 }
 
-pub fn read(path: &str) -> Result<Packages, Error> {
-    let mut file = File::open(path)?;
-    let mut data = String::new();
-    file.read_to_string(&mut data)?;
-    let data: ShowInfoPackages = serde_json::from_str(&data)?;
-    let res = convert(&data);
+pub struct ReportReader {
+    path: String,
+}
 
-    debug!("read {} packages from {}", res.len(), path);
-    Ok(convert(&data))
+impl ReportReader {
+    pub fn new(path: &str) -> ReportReader {
+        ReportReader {
+            path: path.to_owned(),
+        }
+    }
+}
+
+impl PackageReader for ReportReader {
+    type Error = std::io::Error;
+    fn read(&mut self) -> Result<Packages, Self::Error> {
+        let mut file = File::open(&self.path)?;
+        let mut data = String::new();
+        file.read_to_string(&mut data)?;
+        let data: ShowInfoPackages = serde_json::from_str(&data)?;
+        let res = convert(&data);
+
+        debug!("read {} packages from {}", res.len(), self.path);
+        Ok(convert(&data))
+    }
 }

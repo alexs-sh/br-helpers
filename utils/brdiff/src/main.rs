@@ -1,7 +1,7 @@
 mod show_info;
 
-use base::{diffs, githistory, gitworkspace, report};
-use log::{debug, error};
+use base::{diffs, githistory, gitworkspace, mkfile, package::PackageReader, report};
+use log::{debug, error, info};
 use std::io::Error;
 use structopt::StructOpt;
 
@@ -64,9 +64,25 @@ struct Options {
     short_history: bool,
 }
 
+fn guess_reader(filename: &str) -> Result<Box<dyn PackageReader<Error = Error>>, Error> {
+    if filename.ends_with(".json") {
+        info!("use ShowInfo reader for {}", filename);
+        Ok(Box::new(show_info::ReportReader::new(filename)))
+    } else if filename.ends_with(".mk") {
+        info!("use MkFile reader for {}", filename);
+        Ok(Box::new(mkfile::MkFileReader::new(filename)))
+    } else if std::fs::read_dir(filename).is_ok() {
+        info!("use default dir. reader for {}", filename);
+        Ok(Box::new(mkfile::MkFileDirReader::new(filename)))
+    } else {
+        info!("use default file reader for {}", filename);
+        Ok(Box::new(show_info::ReportReader::new(filename)))
+    }
+}
+
 fn run(opts: Options) -> Result<(), Error> {
-    let first = show_info::read(&opts.first_file)?;
-    let second = show_info::read(&opts.second_file)?;
+    let first = guess_reader(&opts.first_file)?.read()?;
+    let second = guess_reader(&opts.second_file)?.read()?;
     let mut diffs = diffs::build(&first, &second);
     if opts.mode == "full" {
         debug!("try to build full history for {} package(s)", diffs.len());

@@ -8,11 +8,18 @@ pub enum PackageSource {
     Other(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Package {
     pub name: String,
-    pub version: String,
+    pub version: Option<String>,
     pub sources: PackageSources,
+    pub location: Option<String>,
+}
+
+impl PartialEq for Package {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.version == other.version && self.sources == other.sources
+    }
 }
 
 impl Package {
@@ -28,6 +35,11 @@ impl Package {
 
 pub type Packages = HashMap<String, Package>;
 pub type PackageSources = Vec<PackageSource>;
+
+pub trait PackageReader {
+    type Error;
+    fn read(&mut self) -> Result<Packages, Self::Error>;
+}
 
 impl FromStr for PackageSource {
     type Err = ();
