@@ -53,7 +53,7 @@ brdiff -f /buildroot-orig/report.json -s /buildroot-mod/report.json
 Run detailed comparison based on information from VCS.
 
 ```
-brdiff brdiff -f /buildroot-orig/report.json -s /buildroot-mod/report.json -m full
+brdiff -f /buildroot-orig/report.json -s /buildroot-mod/report.json -m full
 [*] uuu [modified]
       version: 30e5d5722035dd75e6d4749040a212524bb2f629 -> 294ab5c377ae00c0e659c03bb7cc6eef40e724df
        - fix fail open file begin with > in script
