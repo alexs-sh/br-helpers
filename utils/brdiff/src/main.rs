@@ -14,24 +14,24 @@ struct Options {
     #[structopt(
         short = "f",
         long = "first",
-        default_value = "old",
-        about = "first BR config"
+        default_value = "first.json",
+        about = "path to the first JSON,mk(s)"
     )]
-    first_file: String,
+    path_first: String,
 
     #[structopt(
         short = "s",
         long = "second",
-        default_value = "new",
-        about = "second BR config"
+        default_value = "second.json",
+        about = "path to the second JSON,mk(s)"
     )]
-    second_file: String,
+    path_second: String,
 
     #[structopt(
         short = "m",
         long = "mode",
         default_value = "fast",
-        about = "diff mode [fast,full]"
+        about = "type of a report [fast,full]"
     )]
     mode: String,
 
@@ -39,9 +39,9 @@ struct Options {
         short = "w",
         long = "workdir",
         default_value = "/tmp/brdiff",
-        about = "working directory"
+        about = "path to the working directory"
     )]
-    workdir: String,
+    path_workdir: String,
 
     #[structopt(short = "k", long = "key", about = "SSH key")]
     key: Option<String>,
@@ -58,7 +58,7 @@ struct Options {
     #[structopt(
         long = "short-history",
         parse(try_from_str),
-        default_value = "true",
+        default_value = "false",
         about = "short git history"
     )]
     short_history: bool,
@@ -81,12 +81,12 @@ fn guess_reader(filename: &str) -> Result<Box<dyn PackageReader<Error = Error>>,
 }
 
 fn run(opts: Options) -> Result<(), Error> {
-    let first = guess_reader(&opts.first_file)?.read()?;
-    let second = guess_reader(&opts.second_file)?.read()?;
+    let first = guess_reader(&opts.path_first)?.read()?;
+    let second = guess_reader(&opts.path_second)?.read()?;
     let mut diffs = diffs::build(&first, &second);
     if opts.mode == "full" {
         debug!("try to build full history for {} package(s)", diffs.len());
-        let mut wsopts = gitworkspace::Options::new(&opts.workdir);
+        let mut wsopts = gitworkspace::Options::new(&opts.path_workdir);
         wsopts.key = opts.key;
         wsopts.clean_workspace = opts.clean;
         wsopts.short_history = opts.short_history;
