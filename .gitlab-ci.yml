@@ -26,6 +26,24 @@ x86_64-debian:11:
   tags:
     - docker
 
+x86_64-centos:7:
+  image: centos:7
+  stage: build
+  script:
+    - export PATH="/root/.cargo/bin:${PATH}"
+    - yum -y install curl gcc bzip2 openssl openssl-devel
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+    - cargo build --release
+    - cargo test --release
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_SHA}
+    expire_in: 1 days
+    paths:
+    - target/release/brdiff
+  tags:
+    - docker
+
+
 clippy:
   extends: .base
   stage: analyze

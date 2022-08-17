@@ -4,4 +4,7 @@ members = [
     "base"
 ]
 
+[profile.release]
+strip = "symbols"
+
 
