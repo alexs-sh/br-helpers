@@ -18,7 +18,7 @@ pub struct Package {
 
 impl PartialEq for Package {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.version == other.version && self.sources == other.sources
+        self.name == other.name && self.version == other.version
     }
 }
 
