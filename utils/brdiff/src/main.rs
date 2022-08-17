@@ -62,6 +62,9 @@ struct Options {
         about = "short git history"
     )]
     short_history: bool,
+
+    #[structopt(short = "o", long = "output", about = "output file to report")]
+    output: Option<String>,
 }
 
 fn guess_reader(filename: &str) -> Result<Box<dyn PackageReader<Error = Error>>, Error> {
@@ -93,6 +96,9 @@ fn run(opts: Options) -> Result<(), Error> {
         githistory::append(&mut diffs, &wsopts)?;
     };
     report::print_diffs(&diffs);
+    if let Some(file) = opts.output {
+        report::write_diffs(&file, &diffs)?;
+    }
     Ok(())
 }
 
