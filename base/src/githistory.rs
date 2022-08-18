@@ -20,7 +20,11 @@ impl<'a> GitHistoryBuilder<'a> {
         if !result.is_empty() {
             Ok(result)
         } else {
-            self.history_short(commit2, commit1, short)
+            let mut result = self.history_short(commit1, commit2, short)?;
+            result.iter_mut().for_each(|rec| {
+                rec.reversed = Some(true);
+            });
+            Ok(result)
         }
     }
 
@@ -59,6 +63,7 @@ impl<'a> GitHistoryBuilder<'a> {
                 summary: info.summary().map(|s| s.to_owned()),
                 author: Some(info.author().to_string()),
                 id: Some(id.to_string()),
+                reversed: None,
             };
             result.push(history);
         }

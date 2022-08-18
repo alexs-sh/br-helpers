@@ -7,6 +7,7 @@ pub struct PackageChange {
     pub summary: Option<String>,
     pub author: Option<String>,
     pub id: Option<String>,
+    pub reversed: Option<bool>,
 }
 
 pub enum PackageDiff {
@@ -86,6 +87,10 @@ impl Display for PackageChange {
         }
         if let Some(val) = &self.author {
             writeln!(f, "           - author: {}", val)?;
+        }
+        if let Some(val) = &self.reversed {
+            let direction = if *val { "reversed" } else { "direct" };
+            writeln!(f, "           - direction: {}", direction)?;
         }
         Ok(())
     }
