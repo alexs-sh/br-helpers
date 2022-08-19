@@ -20,7 +20,7 @@ impl<'a> GitHistoryBuilder<'a> {
         if !result.is_empty() {
             Ok(result)
         } else {
-            let mut result = self.history_short(commit1, commit2, short)?;
+            let mut result = self.history_short(commit2, commit1, short)?;
             result.iter_mut().for_each(|rec| {
                 rec.reversed = Some(true);
             });
