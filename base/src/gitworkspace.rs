@@ -69,6 +69,8 @@ impl GitWorkspace {
     }
 
     pub fn create_repo(&self, uri: &str) -> Result<Repository, Error> {
+        debug!("creating repo for:{}", uri);
+
         let repo = get_repo_name(uri)
             .ok_or_else(|| Error::new(ErrorKind::Other, "can't find repo name"))?;
 

@@ -71,34 +71,54 @@ impl<'a> GitHistoryBuilder<'a> {
     }
 }
 
-pub fn append(diffs: &mut PackagesDiff, options: &Options) -> Result<(), Error> {
-    let workspace = GitWorkspace::new(options);
-    workspace.init()?;
+fn append_one(workspace: &mut GitWorkspace, package: &mut PackageDiff, short: bool) -> Option<()> {
+    if let PackageDiff::Changed {
+        first,
+        second,
+        history,
+    } = package
+    {
+        let got_info = first.version.is_some() && second.version.is_some();
+        if got_info {
+            let uri = second.get_git_source().or_else(|| {
+                error!("unsupported uri");
+                None
+            })?;
 
-    for (_, c) in diffs.iter_mut() {
-        if let PackageDiff::Changed {
-            first,
-            second,
-            history,
-        } = c
-        {
-            let got_versions = first.version.is_some() && second.version.is_some();
-            if got_versions {
-                if let Some(uri) = second.get_git_source() {
-                    let repo = workspace.create_repo(&uri)?;
-                    let commits = GitHistoryBuilder { repo: &repo }.history(
-                        first.version.as_ref().unwrap(),
-                        second.version.as_ref().unwrap(),
-                        options.short_history,
-                    )?;
+            let repo = workspace
+                .create_repo(&uri)
+                .map_err(|_| {
+                    error!("can't get repo from {}", uri);
+                })
+                .ok()?;
 
-                    debug!("add {} commits to {}", commits.len(), second.name);
+            let commits = GitHistoryBuilder { repo: &repo }
+                .history(
+                    first.version.as_ref().unwrap(),
+                    second.version.as_ref().unwrap(),
+                    short,
+                )
+                .map_err(|_| {
+                    error!("can't build detailed history for {}", uri);
+                })
+                .ok()?;
 
-                    let history = history.get_or_insert(Vec::new());
-                    commits.iter().for_each(|r| history.push(r.clone()));
-                }
-            }
+            debug!("add {} commits to {}", commits.len(), second.name);
+
+            let history = history.get_or_insert(Vec::new());
+            commits.iter().for_each(|r| history.push(r.clone()));
         }
+        Some(())
+    } else {
+        None
+    }
+}
+
+pub fn append(diffs: &mut PackagesDiff, options: &Options) -> Result<(), Error> {
+    let mut workspace = GitWorkspace::new(options);
+    workspace.init()?;
+    for (_, c) in diffs.iter_mut() {
+        append_one(&mut workspace, c, options.short_history);
     }
     Ok(())
 }
