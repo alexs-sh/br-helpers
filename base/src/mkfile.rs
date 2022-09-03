@@ -38,14 +38,6 @@ fn try_read_git_source<'a>((key, value): (&'a str, &'a str)) -> Option<&'a str> 
     }
 }
 
-fn is_commented(line: &str) -> bool {
-    let txt = line.trim();
-    match txt.chars().take(1).next() {
-        None => false,
-        Some(c) => c == '#',
-    }
-}
-
 fn try_read_cmdline(line: &str) -> Option<&str> {
     let from = line
         .chars()
@@ -197,22 +189,6 @@ impl PackageReader for MkFileDirReader {
 mod test {
 
     use super::*;
-    #[test]
-    fn test_is_commented() {
-        assert_eq!(is_commented("#simple text"), true);
-        assert_eq!(is_commented(" #simple text"), true);
-        assert_eq!(is_commented("	#simple text"), true);
-        assert_eq!(is_commented("#"), true);
-        assert_eq!(is_commented("#simple text"), true);
-    }
-
-    #[test]
-    fn test_not_commented() {
-        assert_eq!(is_commented("simple text#"), false);
-        assert_eq!(is_commented("simple#text#"), false);
-        assert_eq!(is_commented(""), false);
-    }
-
     #[test]
     fn test_get_cmd() {
         assert_eq!(try_read_cmdline("#commented"), None);
