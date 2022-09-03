@@ -16,6 +16,8 @@ impl<'a> GitHistoryBuilder<'a> {
         commit2: &str,
         short: bool,
     ) -> Result<Vec<PackageChange>, Error> {
+        debug!("building history: {}...{}", commit1, commit2);
+
         let result = self.history_short(commit1, commit2, short)?;
         if !result.is_empty() {
             Ok(result)
@@ -29,8 +31,6 @@ impl<'a> GitHistoryBuilder<'a> {
     }
 
     fn search_oid(&self, commit: &str) -> Result<Oid, Error> {
-        debug!("searching object:{}", commit);
-
         let parsed = self.repo.revparse_single(commit).map_err(|_| {
             error!("failed to find object: {}", commit);
             Error::new(ErrorKind::Other, "failed to find object")
@@ -78,36 +78,31 @@ fn append_one(workspace: &mut GitWorkspace, package: &mut PackageDiff, short: bo
         history,
     } = package
     {
-        let got_info = first.version.is_some() && second.version.is_some();
-        if got_info {
-            let uri = second.get_git_source().or_else(|| {
-                error!("unsupported uri");
-                None
-            })?;
+        let v1 = &first.version.as_ref()?;
+        let v2 = &second.version.as_ref()?;
+        let uri = second.get_git_source().or_else(|| {
+            error!("unsupported uri");
+            None
+        })?;
 
-            let repo = workspace
-                .create_repo(&uri)
-                .map_err(|_| {
-                    error!("can't get repo from {}", uri);
-                })
-                .ok()?;
+        let repo = workspace
+            .create_repo(&uri)
+            .map_err(|_| {
+                error!("can't get repo from {}", uri);
+            })
+            .ok()?;
 
-            let commits = GitHistoryBuilder { repo: &repo }
-                .history(
-                    first.version.as_ref().unwrap(),
-                    second.version.as_ref().unwrap(),
-                    short,
-                )
-                .map_err(|_| {
-                    error!("can't build detailed history for {}", uri);
-                })
-                .ok()?;
+        let commits = GitHistoryBuilder { repo: &repo }
+            .history(v1, v2, short)
+            .map_err(|_| {
+                error!("can't build detailed history for {}", uri);
+            })
+            .ok()?;
 
-            debug!("add {} commits to {}", commits.len(), second.name);
+        debug!("add {} commits to {}", commits.len(), second.name);
 
-            let history = history.get_or_insert(Vec::new());
-            commits.iter().for_each(|r| history.push(r.clone()));
-        }
+        let history = history.get_or_insert(Vec::new());
+        commits.iter().for_each(|r| history.push(r.clone()));
         Some(())
     } else {
         None
