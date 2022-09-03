@@ -2,7 +2,7 @@ use crate::package::{Package, Packages};
 use std::collections::HashMap;
 use std::fmt::Display;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageChange {
     pub summary: Option<String>,
     pub author: Option<String>,
