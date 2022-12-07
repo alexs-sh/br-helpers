@@ -23,6 +23,7 @@ x86_64-debian:11:
   artifacts:
     paths:
     - target/release/brdiff
+    - target/release/brfwd
   tags:
     - docker
 
@@ -40,6 +41,7 @@ x86_64-centos:7:
     expire_in: 1 days
     paths:
     - target/release/brdiff
+    - target/release/brfwd
   tags:
     - docker
 
