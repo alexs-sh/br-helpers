@@ -58,8 +58,8 @@ fn try_read_cmdline(line: &str) -> Option<&str> {
 fn try_read_key_value(line: &str) -> Option<(&str, &str)> {
     if let Some(key_idx) = line.chars().position(|symb| symb == '=') {
         if key_idx + 1 < line.len() {
-            let key = (&line[..key_idx]).trim();
-            let value = (&line[key_idx + 1..]).trim();
+            let key = (line[..key_idx]).trim();
+            let value = (line[key_idx + 1..]).trim();
             return Some((key, value));
         }
     }
