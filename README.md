@@ -1,3 +1,10 @@
+# Table of contents
+* [About](#about)
+* [Utils](#utils)
+    * [brdiff](#utils-brdiff)
+    * [brfwd](#utils-brfwd)
+
+<a name="about"></a>
 ### About
 
 Buidlroot helper(s). Some additional tools to automate and simplify work process
@@ -9,6 +16,10 @@ with Buildroot. WIP.
 [![Latest Release](https://gitlab.com/alexssh/br-helpers/-/badges/release.svg)](https://gitlab.com/alexssh/br-helpers/-/releases)
 
 
+<a name="about"></a>
+## Utils
+
+<a name="utils-brdiff"></a>
 ### brdiff
 
 The app collects information about the packages and generates reports. The
@@ -149,4 +160,21 @@ brdiff -f /orig/ -s /mod/ -m full
            - author: Frank Li <Frank.Li@nxp.com>
            ... 
 
+```
+
+<a name="utils-brfwd"></a>
+### brfwd
+
+The app allows updating hashes into mk files using information from git. Typical
+usage is tracking changes and keeping mk files synchronized with the original
+repositories.
+
+```
+cp /tmp/simple-web-server.mk /tmp/simple-web-server.mk.orig
+brfwd -i /tmp/simple-web-server.mk
+diff /tmp/simple-web-server.mk.orig /tmp/simple-web-server.mk
+8c8
+< SIMPLE_WEB_SERVER_VERSION = 3e87ac5fafde20bc4e66811314e54bd261d4ca37
+---
+> SIMPLE_WEB_SERVER_VERSION = 2f29926dbbcd8a0425064d98c24f37ac50bd0b5b
 ```
