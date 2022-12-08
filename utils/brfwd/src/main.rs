@@ -100,6 +100,8 @@ fn run(opts: Options) -> Result<(), Error> {
     wsopts.clean_workspace = opts.clean;
 
     let mut wsgit = GitWorkspace::new(&wsopts);
+    wsgit.init()?;
+
     let limit = if opts.limit == 0 {
         packages.len()
     } else {
