@@ -40,18 +40,16 @@ pub fn get_latest_commit(ws: &mut GitWorkspace, url: &str, head: &str) -> Option
 }
 
 pub fn replace_commit(file: &str, old: &str, new: &str) -> Result<(), Error> {
-    let mut file_in = File::open(file)?;
-    let mut file_out = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open("/tmp/brfwd.tmp")?;
-    let mut data_in = String::new();
-    file_in.read_to_string(&mut data_in)?;
+    let mut input = String::new();
+    File::open(file)?.read_to_string(&mut input)?;
 
-    let data_out = data_in.replace(old, new);
-    file_out.write_all(data_out.as_bytes())?;
-    file_out.sync_all()?;
+    let data = input.replace(old, new);
+    let tmpfile = format!("{}.tmp", file);
+    let mut out = OpenOptions::new().write(true).create(true).open(&tmpfile)?;
 
-    std::fs::rename("/tmp/brfwd.tmp", file)?;
+    out.write_all(data.as_bytes())?;
+    out.sync_all()?;
+
+    std::fs::rename(&tmpfile, file)?;
     Ok(())
 }
