@@ -35,7 +35,7 @@ pub fn get_latest_commit(ws: &mut GitWorkspace, url: &str, head: &str) -> Option
         }
     }
 
-    info!("bracnh {} not found", head);
+    info!("branch {} not found", head);
     None
 }
 
