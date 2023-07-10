@@ -20,6 +20,15 @@ pub fn check_package(package: &Package, blacklist: &HashSet<String>) -> bool {
     true
 }
 
+pub fn is_tag_exists(ws: &mut GitWorkspace, url: &str, tag: &str) -> bool {
+    let repo = ws.create_repo(url).unwrap();
+    if let Ok(tags) = repo.tag_names(None) {
+        tags.iter().any(|name| name == Some(tag))
+    } else {
+        false
+    }
+}
+
 pub fn get_latest_commit(ws: &mut GitWorkspace, url: &str, head: &str) -> Option<String> {
     let repo = ws.create_repo(url).unwrap();
     for branch in repo.branches(None).unwrap() {
