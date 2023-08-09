@@ -15,7 +15,7 @@ struct Options {
         short = "f",
         long = "first",
         default_value = "first.json",
-        about = "path to the first JSON,mk(s)"
+        help = "path to the first JSON,mk(s)"
     )]
     path_first: String,
 
@@ -23,7 +23,7 @@ struct Options {
         short = "s",
         long = "second",
         default_value = "second.json",
-        about = "path to the second JSON,mk(s)"
+        help = "path to the second JSON,mk(s)"
     )]
     path_second: String,
 
@@ -31,7 +31,7 @@ struct Options {
         short = "m",
         long = "mode",
         default_value = "fast",
-        about = "type of a report [fast,full]"
+        help = "type of a report [fast,full]"
     )]
     mode: String,
 
@@ -39,11 +39,11 @@ struct Options {
         short = "w",
         long = "workdir",
         default_value = "/tmp/brdiff",
-        about = "path to the working directory"
+        help = "path to the working directory"
     )]
     path_workdir: String,
 
-    #[structopt(short = "k", long = "key", about = "SSH key")]
+    #[structopt(short = "k", long = "key", help = "SSH key")]
     key: Option<String>,
 
     #[structopt(
@@ -51,7 +51,7 @@ struct Options {
         long = "clean",
         parse(try_from_str),
         default_value = "false",
-        about = "clean working directory before run"
+        help = "clean working directory before run"
     )]
     clean: bool,
 
@@ -59,11 +59,11 @@ struct Options {
         long = "short-history",
         parse(try_from_str),
         default_value = "false",
-        about = "short git history"
+        help = "short git history"
     )]
     short_history: bool,
 
-    #[structopt(short = "o", long = "output", about = "output file to report")]
+    #[structopt(short = "o", long = "output", help = "output file to report")]
     output: Option<String>,
 }
 
