@@ -32,8 +32,8 @@ struct Options {
     )]
     workdir: String,
 
-    #[structopt(short = "k", long = "key", help = "SSH key")]
-    key: Option<String>,
+    #[structopt(short = "k", long = "key", help = "SSH key", default_value = "")]
+    key: String,
 
     #[structopt(
         short = "c",

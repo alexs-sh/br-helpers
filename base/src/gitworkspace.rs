@@ -25,7 +25,7 @@ fn is_dir_exist(path: &str) -> bool {
 #[derive(Clone)]
 pub struct Options {
     pub workdir: String,
-    pub key: Option<String>,
+    pub key: String,
     pub clean_workspace: bool,
     pub short_history: bool,
 }
@@ -34,7 +34,7 @@ impl Options {
     pub fn new(workdir: &str) -> Options {
         Options {
             workdir: workdir.to_owned(),
-            key: None,
+            key: "".to_owned(),
             clean_workspace: false,
             short_history: true,
         }
@@ -94,12 +94,12 @@ impl GitWorkspace {
         let mut builder = git2::build::RepoBuilder::new();
         let mut options = git2::FetchOptions::new();
 
-        if let Some(key) = &self.options.key {
+        if !self.options.key.is_empty() {
             callbacks.credentials(|_url, username_from_url, _allowed_types| {
                 Cred::ssh_key(
                     username_from_url.unwrap(),
                     None,
-                    std::path::Path::new(key),
+                    std::path::Path::new(&self.options.key),
                     None,
                 )
             });
