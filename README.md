@@ -178,3 +178,14 @@ diff /tmp/simple-web-server.mk.orig /tmp/simple-web-server.mk
 ---
 > SIMPLE_WEB_SERVER_VERSION = 2f29926dbbcd8a0425064d98c24f37ac50bd0b5b
 ```
+
+### Using SSH
+
+In most cases, cloning packages requires http[s] connection. But if packages
+from mk files rely on SSH transport, you must specify an appropriate SSH key to
+make download possible. For example,
+
+```
+brfwd -i /tmp/secret-package.mk -k ~/.ssh/id_rsa
+```
+
