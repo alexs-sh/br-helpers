@@ -20,7 +20,7 @@ struct Options {
         short = "i",
         long = "input",
         default_value = "first.json",
-        about = "path to the mk(s)"
+        help = "path to the mk(s)"
     )]
     input: String,
 
@@ -28,11 +28,11 @@ struct Options {
         short = "w",
         long = "workdir",
         default_value = "/tmp/brfwd",
-        about = "path to the working directory"
+        help = "path to the working directory"
     )]
     workdir: String,
 
-    #[structopt(short = "k", long = "key", about = "SSH key")]
+    #[structopt(short = "k", long = "key", help = "SSH key")]
     key: Option<String>,
 
     #[structopt(
@@ -40,7 +40,7 @@ struct Options {
         long = "clean",
         parse(try_from_str),
         default_value = "false",
-        about = "clean working directory before run"
+        help = "clean working directory before run"
     )]
     clean: bool,
 
@@ -48,7 +48,7 @@ struct Options {
         short = "b",
         long = "branch",
         default_value = "origin/master",
-        about = "branch name"
+        help = "branch name"
     )]
     branch: String,
 
@@ -56,16 +56,11 @@ struct Options {
         short = "t",
         long = "tag",
         default_value = "",
-        about = "use tag (if exists)"
+        help = "use tag (if exists)"
     )]
     tag: String,
 
-    #[structopt(
-        short = "s",
-        long = "skip",
-        default_value = "",
-        about = "skip packages"
-    )]
+    #[structopt(short = "s", long = "skip", default_value = "", help = "skip packages")]
     skip: String,
 
     #[structopt(
@@ -73,7 +68,7 @@ struct Options {
         long = "limit",
         parse(try_from_str),
         default_value = "0",
-        about = "process not more packages than limit"
+        help = "process not more packages than limit"
     )]
     limit: usize,
 }
