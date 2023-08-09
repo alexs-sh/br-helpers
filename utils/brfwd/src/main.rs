@@ -6,7 +6,7 @@ use base::{
     package::PackageReader,
 };
 
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use std::collections::HashSet;
 use std::io::Error;
 use structopt::StructOpt;
@@ -60,6 +60,15 @@ struct Options {
     )]
     tag: String,
 
+    #[structopt(
+        short = "a",
+        long = "abbrev",
+        parse(try_from_str),
+        default_value = "0",
+        help = "if nonzero, then the abbreviation of length N will be used as version"
+    )]
+    abbrev: u32,
+
     #[structopt(short = "s", long = "skip", default_value = "", help = "skip packages")]
     skip: String,
 
@@ -95,19 +104,22 @@ fn blacklist_from_str(input: &str) -> HashSet<String> {
 }
 
 fn get_new_version(ws: &mut GitWorkspace, url: &str, opts: &Options) -> Option<String> {
+    let mut result = None;
+    let mut msg = String::new();
     if !opts.tag.is_empty() {
-        debug!("checking {} at {}", opts.tag, url);
-        if hashfwd::is_tag_exists(ws, url, &opts.tag) {
-            Some(opts.tag.to_owned())
-        } else {
-            None
-        }
+        msg = format!("{}: switching to {}", url, opts.tag);
+        result = hashfwd::get_tag(ws, url, &opts.tag, opts.abbrev);
     } else if !opts.branch.is_empty() {
-        debug!("search last commit on branch {}", opts.branch);
-        hashfwd::get_latest_commit(ws, url, &opts.branch)
+        msg = format!("{}: switching to the last commit on {}", url, opts.tag);
+        result = hashfwd::get_latest_commit(ws, url, &opts.branch, opts.abbrev);
+    };
+
+    if result.is_some() {
+        info!("{} done", msg);
     } else {
-        None
+        warn!("{} failed", msg);
     }
+    result
 }
 
 fn run(opts: Options) -> Result<(), Error> {
@@ -149,8 +161,6 @@ fn run(opts: Options) -> Result<(), Error> {
                 info!("got limit of processed packages");
                 break;
             }
-        } else {
-            warn!("can't find new version for {}", url);
         }
     }
     Ok(())

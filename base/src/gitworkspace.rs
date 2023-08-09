@@ -45,6 +45,55 @@ pub struct GitWorkspace {
     options: Options,
 }
 
+pub fn get_object_abbrev(object: &Object, size: Option<u32>) -> String {
+    let opts = DescribeOptions::new();
+    let mut fopts = DescribeFormatOptions::new();
+    fopts.always_use_long_format(true);
+    size.map(|s| fopts.abbreviated_size(s));
+    object
+        .describe(&opts)
+        .unwrap()
+        .format(Some(&fopts))
+        .unwrap()
+}
+
+pub fn get_object_hash(object: &Object) -> String {
+    object.id().to_string()
+}
+
+pub fn get_tag<'a>(repo: &'a Repository, name: &str) -> Option<Object<'a>> {
+    let mut result = None;
+    let _ = repo.tag_foreach(|oid, tagname| {
+        let tagname = std::str::from_utf8(tagname).unwrap();
+        let shortname = name;
+        let longname = format!("refs/tags/{}", name);
+
+        debug!("visit tag {}", tagname);
+
+        if tagname == shortname || tagname == longname {
+            result = repo.find_tag(oid).map(|tag| tag.target().unwrap()).ok();
+            false
+        } else {
+            true
+        }
+    });
+    result
+}
+
+pub fn get_latest_commit<'a>(repo: &'a Repository, head: &str) -> Option<Object<'a>> {
+    for branch in repo.branches(None).unwrap() {
+        let info = branch.unwrap().0;
+        let name = info.name().unwrap().unwrap();
+        debug!("visit branch {}", name);
+        if name == head {
+            if let Ok(comm) = info.get().peel_to_commit() {
+                return Some(comm.as_object().clone());
+            }
+        }
+    }
+    None
+}
+
 impl GitWorkspace {
     pub fn new(options: &Options) -> GitWorkspace {
         GitWorkspace {

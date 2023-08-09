@@ -1,6 +1,7 @@
+use base::gitworkspace;
 use base::{gitworkspace::GitWorkspace, package::Package};
 
-use log::{debug, info};
+use log::info;
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::Error;
@@ -20,32 +21,31 @@ pub fn check_package(package: &Package, blacklist: &HashSet<String>) -> bool {
     true
 }
 
-pub fn is_tag_exists(ws: &mut GitWorkspace, url: &str, tag: &str) -> bool {
+pub fn get_tag(ws: &mut GitWorkspace, url: &str, tag: &str, abbrev: u32) -> Option<String> {
     let repo = ws.create_repo(url).unwrap();
-    if let Ok(tags) = repo.tag_names(None) {
-        tags.iter().any(|name| name == Some(tag))
-    } else {
-        false
-    }
+    gitworkspace::get_tag(&repo, tag).map(|object| {
+        if abbrev > 0 {
+            gitworkspace::get_object_abbrev(&object, Some(abbrev))
+        } else {
+            gitworkspace::get_object_hash(&object)
+        }
+    })
 }
 
-pub fn get_latest_commit(ws: &mut GitWorkspace, url: &str, head: &str) -> Option<String> {
+pub fn get_latest_commit(
+    ws: &mut GitWorkspace,
+    url: &str,
+    head: &str,
+    abbrev: u32,
+) -> Option<String> {
     let repo = ws.create_repo(url).unwrap();
-    for branch in repo.branches(None).unwrap() {
-        let info = branch.unwrap().0;
-        let name = info.name().unwrap().unwrap();
-        debug!("visit branch {}", name);
-        if name == head {
-            if let Ok(comm) = info.get().peel_to_commit() {
-                let id = comm.as_object().id().to_string();
-                info!("{} is the latest commit for {}", id, head);
-                return Some(id);
-            }
+    gitworkspace::get_latest_commit(&repo, head).map(|object| {
+        if abbrev > 0 {
+            gitworkspace::get_object_abbrev(&object, Some(abbrev))
+        } else {
+            gitworkspace::get_object_hash(&object)
         }
-    }
-
-    info!("branch {} not found", head);
-    None
+    })
 }
 
 pub fn replace_commit(file: &str, old: &str, new: &str) -> Result<(), Error> {
