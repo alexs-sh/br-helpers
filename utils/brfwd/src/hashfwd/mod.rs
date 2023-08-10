@@ -23,11 +23,11 @@ pub fn check_package(package: &Package, blacklist: &HashSet<String>) -> bool {
 
 pub fn get_tag(ws: &mut GitWorkspace, url: &str, tag: &str, abbrev: u32) -> Option<String> {
     let repo = ws.create_repo(url).unwrap();
-    gitworkspace::get_tag(&repo, tag).map(|object| {
+    gitworkspace::get_tag(&repo, tag).and_then(|object| {
         if abbrev > 0 {
-            gitworkspace::get_object_abbrev(&object, Some(abbrev))
+            gitworkspace::get_object_abbrev(&object, Some(abbrev), true)
         } else {
-            gitworkspace::get_object_hash(&object)
+            gitworkspace::get_object_abbrev(&object, None, false)
         }
     })
 }
@@ -39,9 +39,9 @@ pub fn get_latest_commit(
     abbrev: u32,
 ) -> Option<String> {
     let repo = ws.create_repo(url).unwrap();
-    gitworkspace::get_latest_commit(&repo, head).map(|object| {
+    gitworkspace::get_latest_commit(&repo, head).and_then(|object| {
         if abbrev > 0 {
-            gitworkspace::get_object_abbrev(&object, Some(abbrev))
+            gitworkspace::get_object_abbrev(&object, Some(abbrev), true)
         } else {
             gitworkspace::get_object_hash(&object)
         }

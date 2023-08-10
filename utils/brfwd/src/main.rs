@@ -110,7 +110,7 @@ fn get_new_version(ws: &mut GitWorkspace, url: &str, opts: &Options) -> Option<S
         msg = format!("{}: switching to {}", url, opts.tag);
         result = hashfwd::get_tag(ws, url, &opts.tag, opts.abbrev);
     } else if !opts.branch.is_empty() {
-        msg = format!("{}: switching to the last commit on {}", url, opts.tag);
+        msg = format!("{}: switching to the last commit on {}", url, opts.branch);
         result = hashfwd::get_latest_commit(ws, url, &opts.branch, opts.abbrev);
     };
 

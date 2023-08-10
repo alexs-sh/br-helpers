@@ -45,20 +45,18 @@ pub struct GitWorkspace {
     options: Options,
 }
 
-pub fn get_object_abbrev(object: &Object, size: Option<u32>) -> String {
+pub fn get_object_abbrev(object: &Object, size: Option<u32>, long: bool) -> Option<String> {
     let opts = DescribeOptions::new();
     let mut fopts = DescribeFormatOptions::new();
-    fopts.always_use_long_format(true);
+    if long {
+        fopts.always_use_long_format(true);
+    }
     size.map(|s| fopts.abbreviated_size(s));
-    object
-        .describe(&opts)
-        .unwrap()
-        .format(Some(&fopts))
-        .unwrap()
+    object.describe(&opts).ok()?.format(Some(&fopts)).ok()
 }
 
-pub fn get_object_hash(object: &Object) -> String {
-    object.id().to_string()
+pub fn get_object_hash(object: &Object) -> Option<String> {
+    Some(object.id().to_string())
 }
 
 pub fn get_tag<'a>(repo: &'a Repository, name: &str) -> Option<Object<'a>> {
