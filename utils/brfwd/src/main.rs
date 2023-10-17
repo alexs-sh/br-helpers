@@ -8,7 +8,7 @@ use base::{
 
 use log::{error, info, warn};
 use std::collections::HashSet;
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -69,8 +69,21 @@ struct Options {
     )]
     abbrev: u32,
 
-    #[structopt(short = "s", long = "skip", default_value = "", help = "skip packages")]
+    #[structopt(
+        short = "s",
+        long = "skip",
+        default_value = "",
+        help = "don't process packages presented here"
+    )]
     skip: String,
+
+    #[structopt(
+        short = "d",
+        long = "direct",
+        default_value = "",
+        help = "process only packages presented here"
+    )]
+    direct: String,
 
     #[structopt(
         short = "l",
@@ -95,12 +108,19 @@ fn guess_reader(filename: &str) -> Result<Box<dyn PackageReader<Error = Error>>,
     }
 }
 
-fn blacklist_from_str(input: &str) -> HashSet<String> {
+fn set_from_string(input: &str) -> HashSet<String> {
     input.split(',').fold(HashSet::new(), |mut acc, value| {
-        info!("add {} into blacklist", value);
-        acc.insert(value.to_owned());
+        if !value.is_empty() {
+            acc.insert(value.to_owned());
+        }
         acc
     })
+}
+
+fn set_print(prefix: &str, set: &HashSet<String>) {
+    for r in set {
+        info!("add {} into {}", r, prefix);
+    }
 }
 
 fn get_new_version(ws: &mut GitWorkspace, url: &str, opts: &Options) -> Option<String> {
@@ -125,7 +145,13 @@ fn get_new_version(ws: &mut GitWorkspace, url: &str, opts: &Options) -> Option<S
 fn run(opts: Options) -> Result<(), Error> {
     let packages = guess_reader(&opts.input)?.read()?;
     let mut wsopts = GitWorkspaceOptions::new(&opts.workdir);
-    let blacklist = blacklist_from_str(&opts.skip);
+    let params = hashfwd::CheckPackageParameters {
+        allow: set_from_string(&opts.direct),
+        deny: set_from_string(&opts.skip),
+    };
+
+    set_print("denylist", &params.deny);
+    set_print("allowlist", &params.allow);
 
     wsopts.key = opts.key.clone();
     wsopts.clean_workspace = opts.clean;
@@ -142,7 +168,7 @@ fn run(opts: Options) -> Result<(), Error> {
     let mut processed = 0;
     for (_, package) in packages.iter() {
         info!("{} processing", package.name);
-        if !hashfwd::check_package(package, &blacklist) {
+        if !hashfwd::check_package(package, &params) {
             continue;
         }
 
@@ -166,15 +192,23 @@ fn run(opts: Options) -> Result<(), Error> {
     Ok(())
 }
 
-fn main() {
-    env_logger::init();
-    let opts = Options::from_args();
-    match run(opts) {
-        Ok(_) => {
-            println!("Done")
-        }
-        Err(err) => {
-            error!("brfwd fails:{:?}", err)
-        }
+fn check_opts(opts: Options) -> Result<Options, Error> {
+    if !(opts.direct.is_empty() || opts.skip.is_empty()) {
+        println!("'skip' and 'direct' parameters are both set at the same time. Please choose only one of them.");
+        return Err(Error::new(ErrorKind::InvalidInput, "invalid parameters"));
     }
+    Ok(opts)
+}
+
+fn main() -> Result<(), Error> {
+    env_logger::init();
+    let opts = check_opts(Options::from_args())?;
+    run(opts)
+        .map(|_| {
+            println!("Done");
+        })
+        .map_err(|err| {
+            error!("brfwd failed:{:?}", err);
+            err
+        })
 }

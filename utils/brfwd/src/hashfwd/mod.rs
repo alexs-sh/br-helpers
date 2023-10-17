@@ -7,10 +7,20 @@ use std::fs::{File, OpenOptions};
 use std::io::Error;
 use std::io::{Read, Write};
 
-pub fn check_package(package: &Package, blacklist: &HashSet<String>) -> bool {
+pub struct CheckPackageParameters {
+    pub allow: HashSet<String>,
+    pub deny: HashSet<String>,
+}
+
+pub fn check_package(package: &Package, params: &CheckPackageParameters) -> bool {
     let name = &package.name;
-    if blacklist.contains(name) {
-        info!("{} package in blacklist", name);
+    if !params.allow.is_empty() && !params.allow.contains(name) {
+        info!("{} package not in allowlist", name);
+        return false;
+    }
+
+    if params.deny.contains(name) {
+        info!("{} package in denylist", name);
         return false;
     }
 
