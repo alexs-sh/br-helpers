@@ -4,6 +4,7 @@ use base::{
     gitworkspace::{GitWorkspace, Options as GitWorkspaceOptions},
     mkfile,
     package::PackageReader,
+    utils,
 };
 
 use log::{error, info, warn};
@@ -32,7 +33,12 @@ struct Options {
     )]
     workdir: String,
 
-    #[structopt(short = "k", long = "key", help = "SSH key", default_value = "")]
+    #[structopt(
+        short = "k",
+        long = "key",
+        help = "path to the SSH key. Empty by default, that means $HOME/.ssh/id_rsa will be used",
+        default_value = ""
+    )]
     key: String,
 
     #[structopt(
@@ -142,6 +148,15 @@ fn get_new_version(ws: &mut GitWorkspace, url: &str, opts: &Options) -> Option<S
     result
 }
 
+fn with_default_key(key: &String, default: Option<String>) -> String {
+    if key.is_empty() {
+        if let Some(default) = default {
+            return default;
+        }
+    }
+    key.to_owned()
+}
+
 fn run(opts: Options) -> Result<(), Error> {
     let packages = guess_reader(&opts.input)?.read()?;
     let mut wsopts = GitWorkspaceOptions::new(&opts.workdir);
@@ -153,7 +168,7 @@ fn run(opts: Options) -> Result<(), Error> {
     set_print("denylist", &params.deny);
     set_print("allowlist", &params.allow);
 
-    wsopts.key = opts.key.clone();
+    wsopts.key = with_default_key(&opts.key, utils::get_default_ssh_key());
     wsopts.clean_workspace = opts.clean;
 
     let mut wsgit = GitWorkspace::new(&wsopts);

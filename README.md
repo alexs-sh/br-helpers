@@ -181,11 +181,12 @@ diff /tmp/simple-web-server.mk.orig /tmp/simple-web-server.mk
 
 ### Using SSH
 
-In most cases, cloning packages requires http[s] connection. But if packages
-from mk files rely on SSH transport, you must specify an appropriate SSH key to
-make download possible. For example,
+In most cases, cloning packages require http[s] connection. But if packages from
+mk files rely on SSH transport, you must specify an appropriate SSH key to make
+download possible. By default, the $HOME/.ssh/id_rsa is used. You can set a
+custom key using CLI arguments,
 
 ```
-brfwd -i /tmp/secret-package.mk -k ~/.ssh/id_rsa
+brfwd -i /tmp/secret-package.mk -k ~/.ssh/secret-key
 ```
 
