@@ -1,6 +1,7 @@
 mod show_info;
 
-use base::{diffs, githistory, gitworkspace, mkfile, package::PackageReader, report};
+use base::{diffs, githistory, gitworkspace, mkfile, package::PackageReader, report, utils};
+
 use log::{debug, error, info};
 use std::io::Error;
 use structopt::StructOpt;
@@ -43,7 +44,12 @@ struct Options {
     )]
     path_workdir: String,
 
-    #[structopt(short = "k", long = "key", help = "SSH key", default_value = "")]
+    #[structopt(
+        short = "k",
+        long = "key",
+        help = "path to the SSH key. Empty by default, that means $HOME/.ssh/id_rsa will be used",
+        default_value = ""
+    )]
     key: String,
 
     #[structopt(
@@ -83,6 +89,15 @@ fn guess_reader(filename: &str) -> Result<Box<dyn PackageReader<Error = Error>>,
     }
 }
 
+fn with_default_key(key: &String, default: Option<String>) -> String {
+    if key.is_empty() {
+        if let Some(default) = default {
+            return default;
+        }
+    }
+    key.to_owned()
+}
+
 fn run(opts: Options) -> Result<(), Error> {
     let first = guess_reader(&opts.path_first)?.read()?;
     let second = guess_reader(&opts.path_second)?.read()?;
@@ -90,7 +105,7 @@ fn run(opts: Options) -> Result<(), Error> {
     if opts.mode == "full" {
         debug!("try to build full history for {} package(s)", diffs.len());
         let mut wsopts = gitworkspace::Options::new(&opts.path_workdir);
-        wsopts.key = opts.key;
+        wsopts.key = with_default_key(&opts.key, utils::get_default_ssh_key());
         wsopts.clean_workspace = opts.clean;
         wsopts.short_history = opts.short_history;
         githistory::append(&mut diffs, &wsopts)?;
