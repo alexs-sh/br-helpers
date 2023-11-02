@@ -79,11 +79,14 @@ pub fn get_tag<'a>(repo: &'a Repository, name: &str) -> Option<Object<'a>> {
 }
 
 pub fn get_latest_commit<'a>(repo: &'a Repository, head: &str) -> Option<Object<'a>> {
+    let remote_head = format!("origin/{}", head);
+
     for branch in repo.branches(None).unwrap() {
         let info = branch.unwrap().0;
         let name = info.name().unwrap().unwrap();
         debug!("visit branch {}", name);
-        if name == head {
+
+        if name == head || name == remote_head {
             if let Ok(comm) = info.get().peel_to_commit() {
                 return Some(comm.as_object().clone());
             }
