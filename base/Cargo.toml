@@ -7,7 +7,5 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-git2 = "0.15.0"
+git2 = "0.18"
 walkdir = "2.3.2"
-
-
